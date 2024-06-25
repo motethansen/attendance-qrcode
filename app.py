@@ -41,7 +41,7 @@ def qr_code_test():
     
     # Check if the hash value is in the list
     if any(h == hash_value for h, t in hash_list):
-        return redirect(url_for('attendance', timestamp=now.strftime("%a %d %Y -- %H:%M:%S")))
+        return redirect(url_for('attendance', timestamp=now.strftime("%a %d %Y -- %H:%M:%S"), hash = hash_value))
     else:
         return redirect(url_for('expired'))
 
