@@ -3,16 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Generator with Countdown</title>
+    <title>QR Code Attendance</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <h1> Scan the QR Code to update your attendance</h1>
     
-    <div id="countdown">
-        <h2>Time until next QR code update:</h2>
-        <div id="timer">
-            <span id="seconds">15</span> seconds
+    <div class="info-bar">
+        <div id="countdown">
+            <h2>Next update in:</h2>
+            <div id="timer">
+                <span id="seconds">15</span> seconds
+            </div>
+        </div>
+        <div id="attendance-counter">
+            <h2>Attendances:</h2>
+            <div id="counter">0</div>
         </div>
     </div>
 
@@ -44,7 +50,16 @@
             }, 1000);
         }
 
+        function updateAttendanceCount() {
+            fetch('/get_attendance_count')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('counter').textContent = data.count;
+                });
+        }
+
         updateQRCode();
+        setInterval(updateAttendanceCount, 5000); // Update attendance count every 5 seconds
     </script>
 </body>
 </html>
