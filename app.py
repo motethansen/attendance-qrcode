@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import hashlib
 from flask import send_file
 import threading
+import logging
+import logging.config
 
 app = Flask(__name__)
 
@@ -12,12 +14,42 @@ app = Flask(__name__)
 hash_list = []
 attendance_count = 0
 
+class Logger:
+    def __init__(self, filename='application.log', location='log/'):
+
+        self.filename = filename
+        self.location = location
+        self.filepath = os.path.join(self.location, self.filename)
+        
+        # Create the log directory if it doesn't exist
+        os.makedirs(self.location, exist_ok=True)
+        
+        # Set up the logger
+        #logging.config.fileConfig('logging.conf')
+
+        logging.basicConfig(filename=self.filepath, level=logging.INFO)
+        self.logger = logging.getLogger('boltLF')
+        
+    def log(self, level, message):
+        if level.lower() == 'debug':
+            self.logger.debug(message)
+        elif level.lower() == 'info':
+            self.logger.info(message)
+        elif level.lower() == 'warning':
+            self.logger.warning(message)
+        elif level.lower() == 'error':
+            self.logger.error(message)
+        elif level.lower() == 'critical':
+            self.logger.critical(message)
+
+
 def generate_qr_data():
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     hash_object = hashlib.md5(timestamp.encode())
     hash_value = hash_object.hexdigest()
     qr_url = url_for('qr_code_test', timestamp=timestamp, hash=hash_value, _external=True)
     print("qr_url :", qr_url)
+    logger.log('info',qr_url)
     # Add hash value to the list with expiration time
     expiration_time = datetime.now() + timedelta(minutes=3)
     hash_list.append((hash_value, expiration_time))
@@ -88,6 +120,8 @@ def get_qr_url():
     return jsonify({'url': url_for('qr_code_image')})
 
 if __name__ == '__main__':
+    # Initialize the logger
+    logger = Logger()
     # Start a background thread to remove expired hashes
     threading.Thread(target=remove_expired_hashes, daemon=True).start()
     app.run(debug=True)
