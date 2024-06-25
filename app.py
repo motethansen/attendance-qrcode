@@ -47,11 +47,18 @@ def qr_code_test():
 @app.route('/attendance')
 def attendance():
     timestamp = request.args.get('timestamp')
-    return f"Attendance recorded at {timestamp}"
+    return render_template('attendance.html', timestamp=timestamp)
+
+@app.route('/submit_attendance', methods=['POST'])
+def submit_attendance():
+    student_id = request.form.get('student_id')
+    timestamp = request.form.get('timestamp')
+    # Here you would typically save this information to a database
+    return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
 
 @app.route('/expired')
 def expired():
-    return "QR code expired"
+    return render_template('expired.html')
 
 @app.route('/qr_code_image')
 def qr_code_image():
@@ -70,4 +77,5 @@ if __name__ == '__main__':
     # Start a background thread to remove expired hashes
     threading.Thread(target=remove_expired_hashes, daemon=True).start()
     app.run(debug=True)
+
 
