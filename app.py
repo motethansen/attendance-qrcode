@@ -47,8 +47,6 @@ def generate_qr_data():
     hash_object = hashlib.md5(timestamp.encode())
     hash_value = hash_object.hexdigest()
     qr_url = url_for('qr_code_test', timestamp=timestamp, hash=hash_value, _external=True)
-    print("qr_url :", qr_url)
-    logger.info(qr_url)
     # Add hash value to the list with expiration time
     expiration_time = datetime.now() + timedelta(minutes=3)
     hash_list.append((hash_value, expiration_time))
@@ -72,6 +70,8 @@ def qr_code_test():
     
     # Check if the hash value is in the list
     if any(h == hash_value for h, t in hash_list):
+        message = 'hash : '+hash_value
+        logger.info(message)
         return redirect(url_for('attendance', timestamp=now.strftime("%a %d %Y -- %H:%M:%S"), hash = hash_value))
     else:
         return redirect(url_for('expired'))
