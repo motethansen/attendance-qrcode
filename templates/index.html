@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator with Countdown</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1> Scan the QR Code to update your attendance</h1>
+    
+    <div id="countdown">
+        <h2>Time until next QR code update:</h2>
+        <div id="timer">
+            <span id="seconds">15</span> seconds
+        </div>
+    </div>
+
+    <p>Scan the QR code below to test:</p>
+    <img id="qr-code" src="{{ url_for('qr_code_image') }}" alt="QR Code">
+
+    <script>
+        function updateQRCode() {
+            fetch('/get_qr_url')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('qr-code').src = data.url + '?t=' + new Date().getTime();
+                    startCountdown();
+                });
+        }
+
+        function startCountdown() {
+            let seconds = 15;
+            const timerElement = document.getElementById('seconds');
+            
+            const countdownInterval = setInterval(() => {
+                seconds--;
+                timerElement.textContent = seconds;
+                
+                if (seconds <= 0) {
+                    clearInterval(countdownInterval);
+                    updateQRCode();
+                }
+            }, 1000);
+        }
+
+        updateQRCode();
+    </script>
+</body>
+</html>
+
