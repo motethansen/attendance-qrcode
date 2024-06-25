@@ -10,6 +10,7 @@ app = Flask(__name__)
 
 # List to store hash values and their expiration times
 hash_list = []
+attendance_count = 0
 
 def generate_qr_data():
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -51,10 +52,16 @@ def attendance():
 
 @app.route('/submit_attendance', methods=['POST'])
 def submit_attendance():
+    global attendance_count
     student_id = request.form.get('student_id')
     timestamp = request.form.get('timestamp')
     # Here you would typically save this information to a database
+    attendance_count += 1
     return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
+
+@app.route('/get_attendance_count')
+def get_attendance_count():
+    return jsonify({'count': attendance_count})
 
 @app.route('/expired')
 def expired():
