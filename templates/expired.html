@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Expired</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>QR Code Expired</h1>
+    <p>Sorry, this QR code has expired. Please scan a new QR code to record your attendance.</p>
+    <a href="{{ url_for('index') }}">Return to Home</a>
+</body>
+</html>
