@@ -6,7 +6,6 @@ import hashlib
 from flask import send_file
 import threading
 import logging
-import logging.config
 
 app = Flask(__name__)
 
@@ -49,7 +48,7 @@ def generate_qr_data():
     hash_value = hash_object.hexdigest()
     qr_url = url_for('qr_code_test', timestamp=timestamp, hash=hash_value, _external=True)
     print("qr_url :", qr_url)
-    logger.log('info',qr_url)
+    logger.info(qr_url)
     # Add hash value to the list with expiration time
     expiration_time = datetime.now() + timedelta(minutes=3)
     hash_list.append((hash_value, expiration_time))
@@ -121,7 +120,14 @@ def get_qr_url():
 
 if __name__ == '__main__':
     # Initialize the logger
-    logger = Logger()
+    filename='application.log' 
+    location='log/'
+    filepath = os.path.join(location, filename)
+    # Create the log directory if it doesn't exist
+    os.makedirs(location, exist_ok=True)
+    logging.basicConfig(filename=self.filepath, level=logging.INFO)
+    logger = logging.getLogger('attendance')
+
     # Start a background thread to remove expired hashes
     threading.Thread(target=remove_expired_hashes, daemon=True).start()
     app.run(debug=True)
