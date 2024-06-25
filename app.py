@@ -48,17 +48,23 @@ def qr_code_test():
 @app.route('/attendance')
 def attendance():
     timestamp = request.args.get('timestamp')
-    return render_template('attendance.html', timestamp=timestamp)
+    hash_value = request.args.get('hash')
+    return render_template('attendance.html', timestamp=timestamp, hash = hash_value)
 
 @app.route('/submit_attendance', methods=['POST'])
 def submit_attendance():
     global attendance_count
     student_id = request.form.get('student_id')
     timestamp = request.form.get('timestamp')
-    # Here you would typically save this information to a database
-    attendance_count += 1
-    return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
 
+    # Check if the hash value is in the list
+    if any(h == hash_value for h, t in hash_list):
+        # Here you would typically save this information to a database
+        attendance_count += 1
+        return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
+    else:
+        return redirect(url_for('expired'))
+        
 @app.route('/get_attendance_count')
 def get_attendance_count():
     return jsonify({'count': attendance_count})
