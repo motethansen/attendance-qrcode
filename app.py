@@ -56,7 +56,8 @@ def submit_attendance():
     global attendance_count
     student_id = request.form.get('student_id')
     timestamp = request.form.get('timestamp')
-
+    hash_value = request.args.get('hash')
+    
     # Check if the hash value is in the list
     if any(h == hash_value for h, t in hash_list):
         # Here you would typically save this information to a database
