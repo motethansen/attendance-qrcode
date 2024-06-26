@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import hashlib
 from flask import send_file
 import threading
-import math
+import pandas as pd
 
 app = Flask(__name__)
 
@@ -13,10 +13,8 @@ app = Flask(__name__)
 hash_list = []
 attendance_count = 0
 
-# Define the accepted location (latitude and longitude) and radius (in meters)
-ACCEPTED_LAT = 1.4468316  # Example: Sembawang latitude
-ACCEPTED_LON = 103.8189143  # Example: Sembawang longitude
-ACCEPTED_RADIUS = 100  # 100 meters radius
+# Path to the Excel file
+EXCEL_FILE = 'classes/BU2001-TF-1000.xlsx'
 
 
 def generate_qr_data():
@@ -72,20 +70,55 @@ def qr_code_test():
 def attendance():
     timestamp = request.args.get('timestamp')
     hash_value = request.args.get('hash')
-    return render_template('attendance.html', timestamp=timestamp, hash_value=hash_value, accepted_lat=ACCEPTED_LAT, accepted_lon=ACCEPTED_LON, accepted_radius=ACCEPTED_RADIUS)
+    return render_template('attendance.html', timestamp=timestamp, hash_value=hash_value)#, accepted_lat=ACCEPTED_LAT, accepted_lon=ACCEPTED_LON, accepted_radius=ACCEPTED_RADIUS)
 
+@app.route('/lookup_student', methods=['POST'])
+def lookup_student():
+    student_id = request.form.get('student_id')
+    df = pd.read_excel(EXCEL_FILE)
+    student = df[df['STUDENTID'] == student_id]
+    if not student.empty:
+        student_name = student.iloc[0]['Name']
+        return jsonify({'name': student_name})
+    else:
+        return jsonify({'name': None})
+    
 @app.route('/submit_attendance', methods=['POST'])
 def submit_attendance():
     global attendance_count
     student_id = request.form.get('student_id')
     timestamp = request.form.get('timestamp')
     hash_value = request.form.get('hash')
+    date_str = datetime.now().strftime("%Y-%m-%d")
     
+    # Load the Excel file
+    df = pd.read_excel(EXCEL_FILE)
+
+    print( "Hash :", hash_value)
+    # Strip any spaces from STUDENTID if they are string
+    if df['STUDENTID'].dtype == 'O':  # Object type often means strings in pandas
+        df['STUDENTID'] = df['STUDENTID'].str.strip()
+
     # Check if the hash value is in the list
-    if any(h == hash_value for h, t in hash_list):
-        # Here you would typically save this information to a database
-        attendance_count += 1
-        return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
+    if any(h == hash_value for h, t in hash_list): 
+        # Convert student_id to integer
+        try:
+            student_id = int(student_id.strip())  # Strip spaces and convert to integer
+        except ValueError:
+            print("Invalid student_id format; must be an integer.")
+
+        # Check if the hash value is in the list
+        if (student_id in df['STUDENTID'].values):
+            if (df.loc[df['STUDENTID'] == student_id, date_str].values[0] != 1):
+                # Here you would typically save this information to a database
+                df.loc[df['STUDENTID'] == student_id, date_str] = 1
+                df.to_excel(EXCEL_FILE, index=False)
+                attendance_count += 1
+                return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
+            else:
+                return f"Registration was already recorded for Student ID: {student_id}"
+        else:
+            return "Student ID not found"
     else:
         return redirect(url_for('expired'))
         

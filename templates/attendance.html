@@ -9,71 +9,41 @@
 <body>
     <h1>Attendance</h1>
     <p>Current time: {{ timestamp }}</p>
-    <form id="attendance-form" action="{{ url_for('submit_attendance') }}" method="post">
+    <form action="{{ url_for('submit_attendance') }}" method="post">
         <label for="student_id">Student ID:</label>
         <input type="text" id="student_id" name="student_id" required>
         <input type="hidden" name="timestamp" value="{{ timestamp }}">
+        <input type="hidden" name="hash" value="{{ hash_value }}">
         <button type="submit">Submit Attendance</button>
     </form>
-    <p id="location-status">Checking location...</p>
+    <p id="student-name"></p>
+    <p id="location-status"></p>
 
     <script>
-        const ACCEPTED_LAT = {{ accepted_lat }};
-        const ACCEPTED_LON = {{ accepted_lon }};
-        const ACCEPTED_RADIUS = {{ accepted_radius }};
-
-        function getLocation() {
-            return new Promise((resolve, reject) => {
-                if ("geolocation" in navigator) {
-                    navigator.geolocation.getCurrentPosition(
-                        position => {
-                            resolve(position);
-                        },
-                        error => {
-                            console.error("Error getting location:", error);
-                            reject(error);
-                        }
-                    );
-                } else {
-                    console.log("Geolocation is not supported by this browser.");
-                    reject(new Error("Geolocation not supported"));
-                }
-            });
-        }
-
-        function checkLocation(lat, lon) {
-            const R = 6371000; // Earth radius in meters
-            const phi1 = ACCEPTED_LAT * Math.PI / 180;
-            const phi2 = lat * Math.PI / 180;
-            const deltaPhi = (lat - ACCEPTED_LAT) * Math.PI / 180;
-            const deltaLambda = (lon - ACCEPTED_LON) * Math.PI / 180;
-
-            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-                      Math.cos(phi1) * Math.cos(phi2) *
-                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            const distance = R * c;
-
-            return distance <= ACCEPTED_RADIUS;
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            getLocation()
-                .then(position => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    if (checkLocation(lat, lon)) {
-                        document.getElementById('location-status').textContent = "Location verified.";
-                        document.getElementById('attendance-form').style.display = 'block';
-                    } else {
-                        window.location.href = "{{ url_for('wrong_location') }}";
-                    }
+        document.getElementById('student_id').addEventListener('blur', function() {
+            const studentId = this.value;
+            fetch('{{ url_for("lookup_student") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'student_id': studentId
                 })
-                .catch(error => {
-                    console.error("Failed to get location:", error);
-                    document.getElementById('location-status').textContent = "Failed to get location. Please enable location services and refresh the page.";
-                });
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.name) {
+                    document.getElementById('student-name').textContent = `Student Name: ${data.name}`;
+                    document.getElementById('attendance-form').style.display = 'block';
+                } else {
+                    document.getElementById('student-name').textContent = 'Student ID not found';
+                    document.getElementById('attendance-form').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
         });
     </script>
 </body>
