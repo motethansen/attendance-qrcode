@@ -127,7 +127,7 @@ def lookup_student():
     student_id = request.form.get('student_id')
     lastestfile = get_latest_excel_file(directory, classcode)
     df = pd.read_excel(lastestfile)
-    
+
     student = df[df['STUDENTID'] == student_id]
     if not student.empty:
         student_name = student.iloc[0]['Name']
@@ -166,7 +166,7 @@ def submit_attendance():
             if (df.loc[df['STUDENTID'] == student_id, date_str].values[0] != 1):
                 # Here you would typically save this information to a database
                 df.loc[df['STUDENTID'] == student_id, date_str] = 1
-                df.to_excel(EXCEL_FILE, index=False)
+                df.to_excel(lastestfile, index=False)
                 attendance_count += 1
                 return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
             else:
