@@ -30,7 +30,20 @@
             fetch('/get_qr_url')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('qr-code').src = data.url + '?t=' + new Date().getTime();
+                    let qrUrl = new URL(data.url);
+                    if ("geolocation" in navigator) {
+                        navigator.geolocation.getCurrentPosition(function(position) {
+                            qrUrl.searchParams.append('lat', position.coords.latitude);
+                            qrUrl.searchParams.append('lon', position.coords.longitude);
+                            document.getElementById('qr-code').src = qrUrl.toString() + '&t=' + new Date().getTime();
+                        }, function(error) {
+                            console.error("Error getting location:", error);
+                            document.getElementById('qr-code').src = data.url + '?t=' + new Date().getTime();
+                        });
+                    } else {
+                        console.log("Geolocation is not supported by this browser.");
+                        document.getElementById('qr-code').src = data.url + '?t=' + new Date().getTime();
+                    }
                     startCountdown();
                 });
         }

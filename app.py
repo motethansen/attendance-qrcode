@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 import hashlib
 from flask import send_file
 import threading
-import logging
+import what3words
+import math
 
 app = Flask(__name__)
 
@@ -13,33 +14,10 @@ app = Flask(__name__)
 hash_list = []
 attendance_count = 0
 
-class Logger:
-    def __init__(self, filename='application.log', location='log/'):
-
-        self.filename = filename
-        self.location = location
-        self.filepath = os.path.join(self.location, self.filename)
-        
-        # Create the log directory if it doesn't exist
-        os.makedirs(self.location, exist_ok=True)
-        
-        # Set up the logger
-        #logging.config.fileConfig('logging.conf')
-
-        logging.basicConfig(filename=self.filepath, level=logging.INFO)
-        self.logger = logging.getLogger('boltLF')
-        
-    def log(self, level, message):
-        if level.lower() == 'debug':
-            self.logger.debug(message)
-        elif level.lower() == 'info':
-            self.logger.info(message)
-        elif level.lower() == 'warning':
-            self.logger.warning(message)
-        elif level.lower() == 'error':
-            self.logger.error(message)
-        elif level.lower() == 'critical':
-            self.logger.critical(message)
+# Define the accepted location (latitude and longitude) and radius (in meters)
+ACCEPTED_LAT = 1.4468316  # Example: Sembawang latitude
+ACCEPTED_LON = 103.8189143  # Example: Sembawang longitude
+ACCEPTED_RADIUS = 100  # 100 meters radius
 
 
 def generate_qr_data():
@@ -59,6 +37,23 @@ def remove_expired_hashes():
         hash_list[:] = [(h, t) for h, t in hash_list if t > now]
         threading.Event().wait(60)  # Check every minute
 
+
+def check_location(lat, lon):
+    # Calculate distance between two points using Haversine formula
+    R = 6371000  # Earth radius in meters
+    phi1 = math.radians(ACCEPTED_LAT)
+    phi2 = math.radians(lat)
+    delta_phi = math.radians(lat - ACCEPTED_LAT)
+    delta_lambda = math.radians(lon - ACCEPTED_LON)
+
+    a = math.sin(delta_phi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+    distance = R * c
+
+    return distance <= ACCEPTED_RADIUS
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -66,13 +61,16 @@ def index():
 @app.route('/qr_code_test')
 def qr_code_test():
     hash_value = request.args.get('hash')
+    lat = float(request.args.get('lat', 0))
+    lon = float(request.args.get('lon', 0))
     now = datetime.now()
     
     # Check if the hash value is in the list
-    if any(h == hash_value for h, t in hash_list):
-        message = 'hash : '+hash_value
-        logger.info(message)
+    if any(h == hash_value for h, t in hash_list) and check_location(lat, lon):
+    
         return redirect(url_for('attendance', timestamp=now.strftime("%a %d %Y -- %H:%M:%S"), hash = hash_value))
+    elif not check_location(lat, lon):
+        return redirect(url_for('wrong_location'))
     else:
         return redirect(url_for('expired'))
 
@@ -87,7 +85,7 @@ def submit_attendance():
     global attendance_count
     student_id = request.form.get('student_id')
     timestamp = request.form.get('timestamp')
-    hash_value = request.args.get('hash')
+    hash_value = request.form.get('hash')
     
     # Check if the hash value is in the list
     if any(h == hash_value for h, t in hash_list):
@@ -105,6 +103,10 @@ def get_attendance_count():
 def expired():
     return render_template('expired.html')
 
+@app.route('/wrong_location')
+def wrong_location():
+    return render_template('wrong_location.html')
+
 @app.route('/qr_code_image')
 def qr_code_image():
     qr_url = generate_qr_data()
@@ -119,15 +121,7 @@ def get_qr_url():
     return jsonify({'url': url_for('qr_code_image')})
 
 if __name__ == '__main__':
-    # Initialize the logger
-    filename='application.log' 
-    location='log/'
-    filepath = os.path.join(location, filename)
-    # Create the log directory if it doesn't exist
-    os.makedirs(location, exist_ok=True)
-    logging.basicConfig(filename=self.filepath, level=logging.INFO)
-    logger = logging.getLogger('attendance')
-
+    
     # Start a background thread to remove expired hashes
     threading.Thread(target=remove_expired_hashes, daemon=True).start()
     app.run(debug=True)
