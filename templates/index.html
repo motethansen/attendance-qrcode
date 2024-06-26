@@ -22,9 +22,12 @@
         </div>
     </div>
 
-    <p>Scan the QR code below to test:</p>
-    <img id="qr-code" src="{{ url_for('qr_code_image') }}" alt="QR Code">
-
+    <p>The QR code below renews every 15 sec:</p>
+    <div id="qr-container">
+        <img id="qr-code" src="" alt="QR Code">
+        <p id="location-status">Getting location...</p>
+    </div>
+    
     <script>
         let currentPosition = null;
 
