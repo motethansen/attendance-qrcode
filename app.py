@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import hashlib
 from flask import send_file
 import threading
-import what3words
 import math
 
 app = Flask(__name__)
