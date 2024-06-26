@@ -60,16 +60,11 @@ def index():
 @app.route('/qr_code_test')
 def qr_code_test():
     hash_value = request.args.get('hash')
-    lat = float(request.args.get('lat', 0))
-    lon = float(request.args.get('lon', 0))
     now = datetime.now()
     
     # Check if the hash value is in the list
-    if any(h == hash_value for h, t in hash_list) and check_location(lat, lon):
-    
+    if any(h == hash_value for h, t in hash_list)    
         return redirect(url_for('attendance', timestamp=now.strftime("%a %d %Y -- %H:%M:%S"), hash = hash_value))
-    elif not check_location(lat, lon):
-        return redirect(url_for('wrong_location'))
     else:
         return redirect(url_for('expired'))
 
@@ -77,7 +72,7 @@ def qr_code_test():
 def attendance():
     timestamp = request.args.get('timestamp')
     hash_value = request.args.get('hash')
-    return render_template('attendance.html', timestamp=timestamp, hash = hash_value)
+    return render_template('attendance.html', timestamp=timestamp, hash_value=hash_value, accepted_lat=ACCEPTED_LAT, accepted_lon=ACCEPTED_LON, accepted_radius=ACCEPTED_RADIUS)
 
 @app.route('/submit_attendance', methods=['POST'])
 def submit_attendance():
