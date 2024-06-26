@@ -1,6 +1,8 @@
 from flask import Flask, render_template, url_for, jsonify, redirect, request
 import qrcode
 import io
+import os
+import re
 from datetime import datetime, timedelta
 import hashlib
 from flask import send_file
@@ -14,8 +16,56 @@ hash_list = []
 attendance_count = 0
 
 # Path to the Excel file
-EXCEL_FILE = 'classes/BU2001-TF-1000.xlsx'
+#EXCEL_FILE = 'classes/BU2001-TF-1000.xlsx'
 
+# Example usage
+directory = 'classes'
+classcode = 'BU2001'
+student_id = '12345'
+date_str = '26-06-2024'  # The column name for the date
+
+# the format for filename shoudl be CLASSCODE_DDMMYYYY_HHMM (e.g. BU2001_26062024_1000.xlsx)
+def get_latest_excel_file(directory, classcode):
+    # Get the current date and time
+    now = datetime.now()
+
+    # Define the file name pattern
+    file_pattern = re.compile(r'([\w-]+)_\d{8}_\d{4}\.xlsx')
+
+    # List all files in the directory
+    files = os.listdir(directory)
+
+    # Filter files that match the pattern
+    matched_files = [f for f in files if file_pattern.match(f)]
+
+    # Filter files based on the current date
+    date_today = now.strftime('%d%m%Y')
+    date_filtered_files = [f for f in matched_files if f.split('_')[1][:8] == date_today]
+
+    # If no files are found for today, return None
+    if not date_filtered_files:
+        return None
+
+    # Further filter files based on the time constraint (within 2 hours window)
+    valid_files = []
+    for file in date_filtered_files:
+        time_str = file.split('_')[2][:4]
+        file_datetime = datetime.strptime(date_today + time_str, "%d%m%Y%H%M")
+        if now-timedelta(hours=1, minutes=30) <= file_datetime <= now:
+            valid_files.append(file)
+
+    # If no valid files are found within the time window, return None
+    if not valid_files:
+        return None
+
+    # Prioritize files by classcode
+    classcode_files = [f for f in valid_files if f.startswith(classcode)]
+    if classcode_files:
+        return os.path.join(directory, classcode_files[0])
+
+    # If no files match the classcode exactly, return the latest valid file
+    valid_files.sort(key=lambda f: datetime.strptime(f.split('_')[1][:8] + f.split('_')[2][:4], "%d%m%Y%H%M"), reverse=True)
+    return os.path.join(directory, valid_files[0]) if valid_files else None
 
 def generate_qr_data():
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -75,7 +125,9 @@ def attendance():
 @app.route('/lookup_student', methods=['POST'])
 def lookup_student():
     student_id = request.form.get('student_id')
-    df = pd.read_excel(EXCEL_FILE)
+    lastestfile = get_latest_excel_file(directory, classcode)
+    df = pd.read_excel(lastestfile)
+    
     student = df[df['STUDENTID'] == student_id]
     if not student.empty:
         student_name = student.iloc[0]['Name']
@@ -91,8 +143,10 @@ def submit_attendance():
     hash_value = request.form.get('hash')
     date_str = datetime.now().strftime("%Y-%m-%d")
     
+    lastestfile = get_latest_excel_file(directory, classcode)
+
     # Load the Excel file
-    df = pd.read_excel(EXCEL_FILE)
+    df = pd.read_excel(lastestfile)
 
     print( "Hash :", hash_value)
     # Strip any spaces from STUDENTID if they are string
