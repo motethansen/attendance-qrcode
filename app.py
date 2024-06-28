@@ -103,7 +103,19 @@ def check_location(lat, lon):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    latest_file = get_latest_excel_file(directory, classcode)
+    if latest_file != None:
+        class_code = latest_file.split('_')[0].replace('classes/', '')
+        start_time = datetime.strptime(latest_file.split('_')[1][:8] + latest_file.split('_')[2][:4], "%d%m%Y%H%M")
+    else:
+        class_code = None
+        start_time = None
+    if class_code and start_time:
+        start_time_str = start_time.strftime(' %H:%M')
+    else:
+        class_code = "No classcode and student list found"
+        start_time_str = "N/A"
+    return render_template('index.html', class_code=class_code, start_time=start_time_str)
 
 @app.route('/qr_code_test')
 def qr_code_test():
