@@ -7,8 +7,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    <h1>{{ status }}</h1>
     <h1>Attendance Result for Student ID: {{ student_id }}</h1>
-    
+    <h2>Student name: {{ given_name }}&nbsp;{{ family_name }} </h2>
     <table class="attendance-table">
         <tr>
             {% for date in date_columns %}

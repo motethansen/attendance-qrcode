@@ -187,13 +187,19 @@ def submit_attendance():
                     df.loc[df['STUDENTID'] == student_id, date_str] = 1
                     df.to_excel(latestfile, index=False)
                     attendance_count += 1
-
-                    date_columns = df.columns[13:]  # Assuming first column is STUDENTID
+                    student_given_name = df.loc[df['STUDENTID'] == student_id, 'GIVENNAME'].values[0]
+                    student_family_name = df.loc[df['STUDENTID'] == student_id, 'FAMILYNAME'].values[0]
+                    date_columns = df.columns[12:]  # Assuming first column is STUDENTID
                     attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
-                    return render_template('result.html', student_id=student_id, attendance_status=attendance_status, date_columns=date_columns)
+                    return render_template('result.html', status = "Attendance Recorded!",student_id=student_id, attendance_status=attendance_status, date_columns=date_columns, given_name=student_given_name, family_name=student_family_name)
                     #return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
                 else:
-                    return f"Registration was already recorded for Student ID: {student_id}"
+                    student_given_name = df.loc[df['STUDENTID'] == student_id, 'GIVENNAME'].values[0]
+                    student_family_name = df.loc[df['STUDENTID'] == student_id, 'FAMILYNAME'].values[0]
+                    date_columns = df.columns[12:]  # Assuming first column is STUDENTID
+                    attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
+                    return render_template('result.html', status = "Registration was already recorded!",student_id=student_id, attendance_status=attendance_status, date_columns=date_columns, given_name=student_given_name, family_name=student_family_name)
+                    #return f"Registration was already recorded for Student ID: {student_id}"
             else:
                 return "Student ID not found"
         else:
