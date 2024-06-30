@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Attendance Result for Student ID: {{ student_id }}</h1>
+    
+    <table class="attendance-table">
+        <tr>
+            {% for date in date_columns %}
+                <th>{{ date }}</th>
+            {% endfor %}
+        </tr>
+        <tr>
+            {% for date in date_columns %}
+                <td class="{% if attendance_status[date] == 1 %}attended{% else %}not-attended{% endif %}">
+                    {% if attendance_status[date] == 1 %}Present{% else %}Absent{% endif %}
+                </td>
+            {% endfor %}
+        </tr>
+    </table>
+</body>
+</html>

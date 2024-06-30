@@ -8,8 +8,14 @@ import hashlib
 from flask import send_file
 import threading
 import pandas as pd
+import math
 
 app = Flask(__name__)
+
+# Define the accepted location (latitude and longitude) and radius (in meters)
+ACCEPTED_LAT = 1.4468316  # Example: Sembawang latitude
+ACCEPTED_LON = 103.8189143  # Example: Sembawang longitude
+ACCEPTED_RADIUS = 100  # 100 meters radius
 
 # List to store hash values and their expiration times
 hash_list = []
@@ -137,15 +143,16 @@ def attendance():
 @app.route('/lookup_student', methods=['POST'])
 def lookup_student():
     student_id = request.form.get('student_id')
-    lastestfile = get_latest_excel_file(directory, classcode)
-    df = pd.read_excel(lastestfile)
+    latestfile = get_latest_excel_file(directory, classcode)
+    if latestfile != None:
+        df = pd.read_excel(latestfile)
 
-    student = df[df['STUDENTID'] == student_id]
-    if not student.empty:
-        student_name = student.iloc[0]['Name']
-        return jsonify({'name': student_name})
-    else:
-        return jsonify({'name': None})
+        student = df[df['STUDENTID'] == student_id]
+        if not student.empty:
+            student_name = student.iloc[0]['Name']
+            return jsonify({'name': student_name})
+        else:
+            return jsonify({'name': None})
     
 @app.route('/submit_attendance', methods=['POST'])
 def submit_attendance():
@@ -155,38 +162,45 @@ def submit_attendance():
     hash_value = request.form.get('hash')
     date_str = datetime.now().strftime("%Y-%m-%d")
     
-    lastestfile = get_latest_excel_file(directory, classcode)
+    latestfile = get_latest_excel_file(directory, classcode)
+    if latestfile != None:
+        # Load the Excel file
+        df = pd.read_excel(latestfile)
 
-    # Load the Excel file
-    df = pd.read_excel(lastestfile)
-
-    print( "Hash :", hash_value)
-    # Strip any spaces from STUDENTID if they are string
-    if df['STUDENTID'].dtype == 'O':  # Object type often means strings in pandas
-        df['STUDENTID'] = df['STUDENTID'].str.strip()
-
-    # Check if the hash value is in the list
-    if any(h == hash_value for h, t in hash_list): 
-        # Convert student_id to integer
-        try:
-            student_id = int(student_id.strip())  # Strip spaces and convert to integer
-        except ValueError:
-            print("Invalid student_id format; must be an integer.")
+        print( "Hash :", hash_value)
+        # Strip any spaces from STUDENTID if they are string
+        if df['STUDENTID'].dtype == 'O':  # Object type often means strings in pandas
+            df['STUDENTID'] = df['STUDENTID'].str.strip()
 
         # Check if the hash value is in the list
-        if (student_id in df['STUDENTID'].values):
-            if (df.loc[df['STUDENTID'] == student_id, date_str].values[0] != 1):
-                # Here you would typically save this information to a database
-                df.loc[df['STUDENTID'] == student_id, date_str] = 1
-                df.to_excel(lastestfile, index=False)
-                attendance_count += 1
-                return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
+        if any(h == hash_value for h, t in hash_list): 
+            # Convert student_id to integer
+            try:
+                student_id = int(student_id.strip())  # Strip spaces and convert to integer
+            except ValueError:
+                print("Invalid student_id format; must be an integer.")
+
+            # Check if the hash value is in the list
+            if (student_id in df['STUDENTID'].values):
+                if (df.loc[df['STUDENTID'] == student_id, date_str].values[0] != 1):
+                    # Here you would typically save this information to a database
+                    df.loc[df['STUDENTID'] == student_id, date_str] = 1
+                    df.to_excel(latestfile, index=False)
+                    attendance_count += 1
+
+                    date_columns = df.columns[13:]  # Assuming first column is STUDENTID
+                    attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
+                    return render_template('result.html', student_id=student_id, attendance_status=attendance_status, date_columns=date_columns)
+                    #return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
+                else:
+                    return f"Registration was already recorded for Student ID: {student_id}"
             else:
-                return f"Registration was already recorded for Student ID: {student_id}"
+                return "Student ID not found"
         else:
-            return "Student ID not found"
+            return redirect(url_for('expired'))
     else:
-        return redirect(url_for('expired'))
+        return "No class file found"
+
         
 @app.route('/get_attendance_count')
 def get_attendance_count():

@@ -88,3 +88,27 @@ a:hover {
     font-style: italic;
     color: #666;
 }
+
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.attendance-table th, .attendance-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+.attendance-table th {
+    background-color: #f2f2f2;
+    text-align: center;
+}
+.attendance-table td {
+    text-align: center;
+}
+.attended {
+    background-color: green;
+    color: white;
+}
+.not-attended {
+    background-color: red;
+    color: white;
+}
