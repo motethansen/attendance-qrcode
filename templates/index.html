@@ -60,13 +60,13 @@
             }, 1000);
         }
 
-        function updateAttendanceCount() {
-            fetch('/get_attendance_count')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('counter').textContent = data.attendance;
-                });
-        }
+        // function updateAttendanceCount() {
+        //     fetch('/get_attendance_count')
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             document.getElementById('counter').textContent = data.attendance;
+        //         });
+        // }
 
         function updateScanCount() {
             fetch('/get_scan_count')
