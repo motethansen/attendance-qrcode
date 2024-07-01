@@ -3,6 +3,7 @@ import qrcode
 import io
 import os
 import re
+import pickle
 from datetime import datetime, timedelta
 import hashlib
 from flask import send_file
@@ -11,6 +12,8 @@ import pandas as pd
 import math
 
 app = Flask(__name__)
+
+PICKLE_FILE = 'attendance_data.pkl'
 
 # Define the accepted location (latitude and longitude) and radius (in meters)
 ACCEPTED_LAT = 1.4468316  # Example: Sembawang latitude
@@ -57,7 +60,7 @@ def get_latest_excel_file(directory, classcode):
     for file in date_filtered_files:
         time_str = file.split('_')[2][:4]
         file_datetime = datetime.strptime(date_today + time_str, "%d%m%Y%H%M")
-        if now-timedelta(hours=1, minutes=30) <= file_datetime <= now:
+        if now-timedelta(hours=1, minutes=00) <= file_datetime <= now+timedelta( minutes=10):
             valid_files.append(file)
 
     # If no valid files are found within the time window, return None
@@ -107,10 +110,39 @@ def check_location(lat, lon):
     return distance <= ACCEPTED_RADIUS
 
 
+def save_to_pickle(data):
+    if os.path.exists(PICKLE_FILE):
+        with open(PICKLE_FILE, 'rb') as f:
+            all_data = pickle.load(f)
+    else:
+        all_data = []
+
+    all_data.append(data)
+
+    with open(PICKLE_FILE, 'wb') as f:
+        pickle.dump(all_data, f)
+
+def load_pickle_data():
+    if os.path.exists(PICKLE_FILE):
+        with open(PICKLE_FILE, 'rb') as f:
+            return pickle.load(f)
+    return []
+
+def ensure_today_column(df):
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    if today_str not in df.columns:
+        df[today_str] = 0
+    return df, today_str
+
 @app.route('/')
 def index():
+    start_time = "N/A"
+    today_str = None
     latest_file = get_latest_excel_file(directory, classcode)
     if latest_file != None:
+        df = pd.read_excel(latest_file)
+        df, today_str = ensure_today_column(df)
+        df.to_excel(latest_file, index=False)  # Save the file if a new column is added
         class_code = latest_file.split('_')[0].replace('classes/', '')
         start_time = datetime.strptime(latest_file.split('_')[1][:8] + latest_file.split('_')[2][:4], "%d%m%Y%H%M")
     else:
@@ -121,7 +153,7 @@ def index():
     else:
         class_code = "No classcode and student list found"
         start_time_str = "N/A"
-    return render_template('index.html', class_code=class_code, start_time=start_time_str)
+    return render_template('index.html', classcode=class_code, start_time=start_time_str, today_str=today_str)
 
 @app.route('/qr_code_test')
 def qr_code_test():
@@ -182,21 +214,35 @@ def submit_attendance():
 
             # Check if the hash value is in the list
             if (student_id in df['STUDENTID'].values):
+                # Get scan count for the ID
+                scan_count_for_the_id = len([record for record in load_pickle_data() if record['student_id'] == student_id]) + 1
+
+                student_given_name = df.loc[df['STUDENTID'] == student_id, 'GIVENNAME'].values[0]
+                student_family_name = df.loc[df['STUDENTID'] == student_id, 'FAMILYNAME'].values[0]
+                date_columns = df.columns[12:]  # Assuming 12 column is STUDENTID
+                # Save data to pickle
+                data = {
+                    'timestamp': datetime.now(),
+                    'classcode': classcode,
+                    'student_id': student_id,
+                    'given_name': student_given_name,
+                    'family_name': student_family_name,
+                    'scan_count_for_the_id': scan_count_for_the_id,
+                    'date': datetime.now().strftime('%Y-%m-%d'),
+                    'time': datetime.now().strftime('%H%M')
+                }
+                save_to_pickle(data)
+
                 if (df.loc[df['STUDENTID'] == student_id, date_str].values[0] != 1):
                     # Here you would typically save this information to a database
                     df.loc[df['STUDENTID'] == student_id, date_str] = 1
                     df.to_excel(latestfile, index=False)
                     attendance_count += 1
-                    student_given_name = df.loc[df['STUDENTID'] == student_id, 'GIVENNAME'].values[0]
-                    student_family_name = df.loc[df['STUDENTID'] == student_id, 'FAMILYNAME'].values[0]
-                    date_columns = df.columns[12:]  # Assuming first column is STUDENTID
+
                     attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
                     return render_template('result.html', status = "Attendance Recorded!",student_id=student_id, attendance_status=attendance_status, date_columns=date_columns, given_name=student_given_name, family_name=student_family_name)
                     #return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
                 else:
-                    student_given_name = df.loc[df['STUDENTID'] == student_id, 'GIVENNAME'].values[0]
-                    student_family_name = df.loc[df['STUDENTID'] == student_id, 'FAMILYNAME'].values[0]
-                    date_columns = df.columns[12:]  # Assuming first column is STUDENTID
                     attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
                     return render_template('result.html', status = "Registration was already recorded!",student_id=student_id, attendance_status=attendance_status, date_columns=date_columns, given_name=student_given_name, family_name=student_family_name)
                     #return f"Registration was already recorded for Student ID: {student_id}"
