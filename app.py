@@ -302,14 +302,14 @@ def get_scan_count():
     else:
         return jsonify({'count': -1})
 
-@app.route('/get_attendance_count')
-def get_attendance_count():
-    latest_file = get_latest_excel_file(directory, classcode)
-    if latest_file != None:
-        class_code = latest_file.split('_')[0].replace('classes/', '')
-        attendance_data = load_pickle_data()
-        today_str = datetime.now().strftime('%Y-%m-%d')
-        current_attendance = [record for record in attendance_data if record['class_code'] == class_code and record['date'] == today_str]
+# @app.route('/get_attendance_count')
+# def get_attendance_count():
+#     latest_file = get_latest_excel_file(directory, classcode)
+#     if latest_file != None:
+#         class_code = latest_file.split('_')[0].replace('classes/', '')
+#         attendance_data = load_pickle_data()
+#         today_str = datetime.now().strftime('%Y-%m-%d')
+#         current_attendance = [record for record in attendance_data if record['class_code'] == class_code and record['date'] == today_str]
 
-        return jsonify(attendance=len(current_attendance))
-    return jsonify(attendance=[])
+#         return jsonify(attendance=len(current_attendance))
+#     return jsonify(attendance=[])
