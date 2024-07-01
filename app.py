@@ -67,7 +67,7 @@ def get_latest_excel_file(directory, classcode):
     if not valid_files:
         return None
 
-    # Prioritize files by classcode
+    # Prioritize files by classcode only looking up BU2001
     classcode_files = [f for f in valid_files if f.startswith(classcode)]
     if classcode_files:
         return os.path.join(directory, classcode_files[0])
@@ -134,6 +134,11 @@ def ensure_today_column(df):
         df[today_str] = 0
     return df, today_str
 
+def get_scan_count_for_classcode(classcode):
+    all_data = load_pickle_data()
+    return len([record for record in all_data if record['classcode'] == classcode])
+
+
 @app.route('/')
 def index():
     start_time = "N/A"
@@ -145,15 +150,17 @@ def index():
         df.to_excel(latest_file, index=False)  # Save the file if a new column is added
         class_code = latest_file.split('_')[0].replace('classes/', '')
         start_time = datetime.strptime(latest_file.split('_')[1][:8] + latest_file.split('_')[2][:4], "%d%m%Y%H%M")
+        scan_count = get_scan_count_for_classcode(classcode)
     else:
         class_code = None
         start_time = None
+        scan_count = 0
     if class_code and start_time:
         start_time_str = start_time.strftime(' %H:%M')
     else:
         class_code = "No classcode and student list found"
         start_time_str = "N/A"
-    return render_template('index.html', classcode=class_code, start_time=start_time_str, today_str=today_str)
+    return render_template('index.html', classcode=class_code, start_time=start_time_str, today_str=today_str, scan_count=scan_count)
 
 @app.route('/qr_code_test')
 def qr_code_test():
@@ -285,4 +292,24 @@ if __name__ == '__main__':
     threading.Thread(target=remove_expired_hashes, daemon=True).start()
     app.run(debug=True)
 
+@app.route('/get_scan_count')
+def get_scan_count():
+    latest_file = get_latest_excel_file(directory, classcode)
+    if latest_file != None:
+        class_code = latest_file.split('_')[0].replace('classes/', '')
+        scan_count = get_scan_count_for_classcode(class_code)
+        return jsonify(count=scan_count)
+    else:
+        return jsonify({'count': -1})
 
+@app.route('/get_attendance_count')
+def get_attendance_count():
+    latest_file = get_latest_excel_file(directory, classcode)
+    if latest_file != None:
+        class_code = latest_file.split('_')[0].replace('classes/', '')
+        attendance_data = load_pickle_data()
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        current_attendance = [record for record in attendance_data if record['class_code'] == class_code and record['date'] == today_str]
+
+        return jsonify(attendance=len(current_attendance))
+    return jsonify(attendance=[])

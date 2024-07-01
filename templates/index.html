@@ -14,6 +14,7 @@
             <h2>Class Code: {{ classcode }}</h2>
             <h2>Session Start Time: {{ start_time }}</h2>
             <h2>Today's Date: {{ today_str }}</h2>
+            <h2>Total Scans: <span id="scan-count">{{ scan_count }}</span></h2>
         </div>
         <div id="countdown">
             <h2>Next update in:</h2>
@@ -64,6 +65,14 @@
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('counter').textContent = data.count;
+                });
+        }
+
+        function updateScanCount() {
+            fetch('/get_scan_count')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('scan-count').textContent = data.count;
                 });
         }
 
