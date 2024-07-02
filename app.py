@@ -202,7 +202,9 @@ def submit_attendance():
     date_str = datetime.now().strftime("%Y-%m-%d")
     
     latestfile = get_latest_excel_file(directory, classcode)
+
     if latestfile != None:
+        class_code = latestfile.split('_')[0].replace('classes/', '')
         # Load the Excel file
         df = pd.read_excel(latestfile)
 
@@ -230,7 +232,7 @@ def submit_attendance():
                 # Save data to pickle
                 data = {
                     'timestamp': datetime.now(),
-                    'classcode': classcode,
+                    'classcode': class_code,
                     'student_id': student_id,
                     'given_name': student_given_name,
                     'family_name': student_family_name,
@@ -260,11 +262,23 @@ def submit_attendance():
     else:
         return "No class file found"
 
-        
-@app.route('/get_attendance_count')
-def get_attendance_count():
-    return jsonify({'count': attendance_count})
 
+@app.route('/get_scan_count')
+def get_scan_count():
+    latest_file = get_latest_excel_file(directory, classcode)
+    if latest_file != None:
+        class_code = latest_file.split('_')[0].replace('classes/', '')
+        scan_count = get_scan_count_for_classcode(class_code)
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        attendance_data = load_pickle_data()
+        if attendance_data:
+            attendance_count = len([record for record in attendance_data if record['classcode'] == classcode and record['date'] == today_str])
+        else:
+            attendance_count = 0
+        return jsonify(count=scan_count, attendance_count=attendance_count)
+    else:
+        return jsonify({'count': -1})
+    
 @app.route('/expired')
 def expired():
     return render_template('expired.html')
@@ -292,24 +306,4 @@ if __name__ == '__main__':
     threading.Thread(target=remove_expired_hashes, daemon=True).start()
     app.run(debug=True)
 
-@app.route('/get_scan_count')
-def get_scan_count():
-    latest_file = get_latest_excel_file(directory, classcode)
-    if latest_file != None:
-        class_code = latest_file.split('_')[0].replace('classes/', '')
-        scan_count = get_scan_count_for_classcode(class_code)
-        return jsonify(count=scan_count, current_attendance=5)
-    else:
-        return jsonify({'count': -1})
 
-# @app.route('/get_attendance_count')
-# def get_attendance_count():
-#     latest_file = get_latest_excel_file(directory, classcode)
-#     if latest_file != None:
-#         class_code = latest_file.split('_')[0].replace('classes/', '')
-#         attendance_data = load_pickle_data()
-#         today_str = datetime.now().strftime('%Y-%m-%d')
-#         current_attendance = [record for record in attendance_data if record['class_code'] == class_code and record['date'] == today_str]
-
-#         return jsonify(attendance=len(current_attendance))
-#     return jsonify(attendance=[])
