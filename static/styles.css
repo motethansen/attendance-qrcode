@@ -19,17 +19,17 @@ h1 {
     border-radius: 5px;
 }
 
-#countdown {
+#countdown, #attendance_count {
     text-align: center;
 }
 
-#countdown h2,  h2 {
+#countdown h2,   h2 {
     margin: 0;
     font-size: 18px;
     color: #555;
 }
 
-#timer, #attendance_count {
+#timer, #attendance-counter {
     font-size: 24px;
     font-weight: bold;
     color: #007bff;
