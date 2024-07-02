@@ -298,7 +298,7 @@ def get_scan_count():
     if latest_file != None:
         class_code = latest_file.split('_')[0].replace('classes/', '')
         scan_count = get_scan_count_for_classcode(class_code)
-        return jsonify(count=scan_count)
+        return jsonify(count=scan_count, current_attendance=5)
     else:
         return jsonify({'count': -1})
 
