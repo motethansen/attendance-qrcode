@@ -272,10 +272,10 @@ def get_scan_count():
         today_str = datetime.now().strftime('%Y-%m-%d')
         attendance_data = load_pickle_data()
         if attendance_data:
-            attendance_count = len([record for record in attendance_data if record['classcode'] == classcode and record['date'] == today_str])
+            attendancecount = len([record for record in attendance_data if record['classcode'] == classcode and record['date'] == today_str])
         else:
-            attendance_count = 0
-        return jsonify(count=scan_count, attendance_count=attendance_count)
+            attendancecount = 0
+        return jsonify(count=scan_count, attendancecount=attendancecount)
     else:
         return jsonify({'count': -1})
     
