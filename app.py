@@ -13,7 +13,7 @@ import math
 
 app = Flask(__name__)
 
-PICKLE_FILE = 'attendance_data.pkl'
+PICKLE_FILE = 'attendance_data.pkl' #this is the log file pickle format
 
 # Define the accepted location (latitude and longitude) and radius (in meters)
 ACCEPTED_LAT = 1.4468316  # Example: Sembawang latitude
