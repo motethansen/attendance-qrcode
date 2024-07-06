@@ -10,6 +10,7 @@
     <h1>{{ status }}</h1>
     <h1>Attendance Result for Student ID: {{ student_id }}</h1>
     <h2>Student name: {{ given_name }}&nbsp;{{ family_name }} </h2>
+    <p>Number of scan-count: {{ scan_count_for_the_id }}</p>
     <table class="attendance-table">
         <tr>
             {% for date in date_columns %}

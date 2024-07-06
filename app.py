@@ -15,11 +15,7 @@ app = Flask(__name__)
 
 PICKLE_FILE = 'attendance_data.pkl' #this is the log file pickle format
 
-# Define the accepted location (latitude and longitude) and radius (in meters)
-ACCEPTED_LAT = 1.4468316  # Example: Sembawang latitude
-ACCEPTED_LON = 103.8189143  # Example: Sembawang longitude
-ACCEPTED_RADIUS = 100  # 100 meters radius
-
+#
 # List to store hash values and their expiration times
 hash_list = []
 attendance_count = 0
@@ -27,14 +23,14 @@ attendance_count = 0
 # Path to the Excel file
 #EXCEL_FILE = 'classes/BU2001-TF-1000.xlsx'
 
-# Example usage
-directory = 'classes'
-classcode = 'BU2001'
-student_id = '12345'
-date_str = '26-06-2024'  # The column name for the date
+# configs
+directory = 'classes' # location of excel files 
+#classcode = 'BU2001'
+#student_id = '12345'
+#date_str = '26-06-2024'  # The column name for the date
 
 # the format for filename shoudl be CLASSCODE_DDMMYYYY_HHMM (e.g. BU2001_26062024_1000.xlsx)
-def get_latest_excel_file(directory, classcode):
+def get_latest_excel_file(directory):
     # Get the current date and time
     now = datetime.now()
 
@@ -67,11 +63,6 @@ def get_latest_excel_file(directory, classcode):
     if not valid_files:
         return None
 
-    # Prioritize files by classcode only looking up BU2001
-    classcode_files = [f for f in valid_files if f.startswith(classcode)]
-    if classcode_files:
-        return os.path.join(directory, classcode_files[0])
-
     # If no files match the classcode exactly, return the latest valid file
     valid_files.sort(key=lambda f: datetime.strptime(f.split('_')[1][:8] + f.split('_')[2][:4], "%d%m%Y%H%M"), reverse=True)
     return os.path.join(directory, valid_files[0]) if valid_files else None
@@ -94,21 +85,6 @@ def remove_expired_hashes():
         threading.Event().wait(60)  # Check every minute
 
 
-def check_location(lat, lon):
-    # Calculate distance between two points using Haversine formula
-    R = 6371000  # Earth radius in meters
-    phi1 = math.radians(ACCEPTED_LAT)
-    phi2 = math.radians(lat)
-    delta_phi = math.radians(lat - ACCEPTED_LAT)
-    delta_lambda = math.radians(lon - ACCEPTED_LON)
-
-    a = math.sin(delta_phi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-
-    distance = R * c
-
-    return distance <= ACCEPTED_RADIUS
-
 
 def save_to_pickle(data):
     if os.path.exists(PICKLE_FILE):
@@ -121,6 +97,47 @@ def save_to_pickle(data):
 
     with open(PICKLE_FILE, 'wb') as f:
         pickle.dump(all_data, f)
+
+# still some issues with the increment function
+def increment_scan_count(student_id):
+    data = load_pickle_data()
+    student_id_str = str(student_id)  # Ensure student_id is a string
+    found = False
+    for record in data:
+        if 'student_id' in record and record['student_id'] == student_id_str:
+            record['scan_count_for_the_id'] = record.get('scan_count_for_the_id', 0) + 1
+            found = True
+            break
+    
+    save_to_pickle(data)
+
+
+def get_attendance_count(classcode, date):
+    data = load_pickle_data()
+    attendance_count = 0
+    for record in data:
+        if 'classcode' in record and 'date' in record and 'attendance_status' in record:
+            if record['classcode'] == classcode and record['date'] == date and record['attendance_status'] == 1:
+                attendance_count += 1
+    return attendance_count
+
+def get_total_scan_count(classcode, date):
+    data = load_pickle_data()
+    total_scan_count = 0
+    for record in data:
+        if 'classcode' in record and 'date' in record and 'scan_count_for_the_id' in record:
+            if record['classcode'] == classcode and record['date'] == date:
+                total_scan_count += record['scan_count_for_the_id']
+    return total_scan_count
+
+def get_scan_count_for_id(classcode, date, studentid):
+    data = load_pickle_data()
+    scan_count = 0
+    for record in data:
+        if 'classcode' in record and 'date' in record and 'scan_count_for_the_id' in record:
+            if record['classcode'] == classcode and record['date'] == date and record['student_id'] == studentid:
+                scan_count += record['scan_count_for_the_id']
+    return scan_count
 
 def load_pickle_data():
     if os.path.exists(PICKLE_FILE):
@@ -136,23 +153,34 @@ def ensure_today_column(df):
 
 def get_scan_count_for_classcode(classcode):
     all_data = load_pickle_data()
-    return len([record for record in all_data if record['classcode'] == classcode])
+    count = 0
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    
+    for record in all_data:
+        if 'classcode' in record and 'date' in record:
+            if record['classcode'] == classcode and record['date'] == date_str:
+                count += 1
+    return count
 
 
 @app.route('/')
 def index():
     start_time = "N/A"
     today_str = None
-    latest_file = get_latest_excel_file(directory, classcode)
+    class_code = None
+    total_students = 0
+    latest_file = get_latest_excel_file(directory)
     if latest_file != None:
         df = pd.read_excel(latest_file)
         df, today_str = ensure_today_column(df)
         df.to_excel(latest_file, index=False)  # Save the file if a new column is added
         class_code = latest_file.split('_')[0].replace('classes/', '')
         start_time = datetime.strptime(latest_file.split('_')[1][:8] + latest_file.split('_')[2][:4], "%d%m%Y%H%M")
-        scan_count = get_scan_count_for_classcode(classcode)
+        scan_count = get_total_scan_count(class_code, today_str)
+        #attendance_data = load_pickle_data()
+        #current_attendance = [record for record in attendance_data if record['classcode'] == class_code and record['date'] == today_str]
+        total_students = df['STUDENTID'].nunique()  # Get total number of unique students
     else:
-        class_code = None
         start_time = None
         scan_count = 0
     if class_code and start_time:
@@ -160,7 +188,7 @@ def index():
     else:
         class_code = "No classcode and student list found"
         start_time_str = "N/A"
-    return render_template('index.html', classcode=class_code, start_time=start_time_str, today_str=today_str, scan_count=scan_count)
+    return render_template('index.html', classcode=class_code, start_time=start_time_str, today_str=today_str, scan_count=scan_count, total_students=total_students)
 
 @app.route('/qr_code_test')
 def qr_code_test():
@@ -182,7 +210,7 @@ def attendance():
 @app.route('/lookup_student', methods=['POST'])
 def lookup_student():
     student_id = request.form.get('student_id')
-    latestfile = get_latest_excel_file(directory, classcode)
+    latestfile = get_latest_excel_file(directory)
     if latestfile != None:
         df = pd.read_excel(latestfile)
 
@@ -197,11 +225,13 @@ def lookup_student():
 def submit_attendance():
     global attendance_count
     student_id = request.form.get('student_id')
+    student_id = student_id.strip()
     timestamp = request.form.get('timestamp')
     hash_value = request.form.get('hash')
     date_str = datetime.now().strftime("%Y-%m-%d")
     
-    latestfile = get_latest_excel_file(directory, classcode)
+
+    latestfile = get_latest_excel_file(directory)
 
     if latestfile != None:
         class_code = latestfile.split('_')[0].replace('classes/', '')
@@ -211,49 +241,50 @@ def submit_attendance():
         print( "Hash :", hash_value)
         # Strip any spaces from STUDENTID if they are string
         if df['STUDENTID'].dtype == 'O':  # Object type often means strings in pandas
-            df['STUDENTID'] = df['STUDENTID'].str.strip()
+            df['STUDENTID'] = df['STUDENTID'].astype(str)
+        
+        student_id = str(student_id)
 
         # Check if the hash value is in the list
         if any(h == hash_value for h, t in hash_list): 
-            # Convert student_id to integer
-            try:
-                student_id = int(student_id.strip())  # Strip spaces and convert to integer
-            except ValueError:
-                print("Invalid student_id format; must be an integer.")
-
+            student_id = int(student_id.strip())  # Strip spaces and convert to integer
+            
             # Check if the hash value is in the list
             if (student_id in df['STUDENTID'].values):
-                # Get scan count for the ID
-                scan_count_for_the_id = len([record for record in load_pickle_data() if record['student_id'] == student_id]) + 1
-
                 student_given_name = df.loc[df['STUDENTID'] == student_id, 'GIVENNAME'].values[0]
                 student_family_name = df.loc[df['STUDENTID'] == student_id, 'FAMILYNAME'].values[0]
                 date_columns = df.columns[12:]  # Assuming 12 column is STUDENTID
-                # Save data to pickle
-                data = {
-                    'timestamp': datetime.now(),
-                    'classcode': class_code,
-                    'student_id': student_id,
-                    'given_name': student_given_name,
-                    'family_name': student_family_name,
-                    'scan_count_for_the_id': scan_count_for_the_id,
-                    'date': datetime.now().strftime('%Y-%m-%d'),
-                    'time': datetime.now().strftime('%H%M')
-                }
-                save_to_pickle(data)
+                # Get scan count for the ID
+                scan_count_for_the_id = get_scan_count_for_id(class_code, date_str, student_id)
+                if (scan_count_for_the_id== 0):
+                    
+                    if (df.loc[df['STUDENTID'] == student_id, date_str].values[0] != 1):
+                        # Here you would typically save this information to a database
+                        df.loc[df['STUDENTID'] == student_id, date_str] = 1
+                        df.to_excel(latestfile, index=False)
 
-                if (df.loc[df['STUDENTID'] == student_id, date_str].values[0] != 1):
-                    # Here you would typically save this information to a database
-                    df.loc[df['STUDENTID'] == student_id, date_str] = 1
-                    df.to_excel(latestfile, index=False)
-                    attendance_count += 1
+                        # Save data to pickle
+                        data = {
+                            'timestamp': timestamp, #datetime.now(),
+                            'classcode': class_code,
+                            'student_id': student_id,
+                            'given_name': student_given_name,
+                            'family_name': student_family_name,
+                            'scan_count_for_the_id': 1,
+                            'attendance_status': 1,
+                            'date': datetime.now().strftime('%Y-%m-%d'),
+                            'time': datetime.now().strftime('%H%M')
+                        }
+                        save_to_pickle(data)
 
-                    attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
-                    return render_template('result.html', status = "Attendance Recorded!",student_id=student_id, attendance_status=attendance_status, date_columns=date_columns, given_name=student_given_name, family_name=student_family_name)
-                    #return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
+                        attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
+                        return render_template('result.html', status = "Attendance Recorded!",student_id=student_id, attendance_status=attendance_status, date_columns=date_columns, given_name=student_given_name, family_name=student_family_name, scan_count_for_the_id=scan_count_for_the_id)
+                        #return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
                 else:
-                    attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
-                    return render_template('result.html', status = "Registration was already recorded!",student_id=student_id, attendance_status=attendance_status, date_columns=date_columns, given_name=student_given_name, family_name=student_family_name)
+                    if (scan_count_for_the_id > 0):
+                        increment_scan_count(student_id)
+                        attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
+                    return render_template('result.html', status = "Registration was already recorded!",student_id=student_id, attendance_status=attendance_status, date_columns=date_columns, given_name=student_given_name, family_name=student_family_name, scan_count_for_the_id=scan_count_for_the_id)
                     #return f"Registration was already recorded for Student ID: {student_id}"
             else:
                 return "Student ID not found"
@@ -262,20 +293,39 @@ def submit_attendance():
     else:
         return "No class file found"
 
+@app.route('/get_attendance_status')
+def get_attendance_status():
+    latest_file = get_latest_excel_file(directory)
+    if latest_file:
+        class_code = latest_file.split('_')[0].replace('classes/', '')
+        attendance_data = load_pickle_data()
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        current_attendance = [record for record in attendance_data if record['classcode'] == class_code and record['date'] == today_str]
+        return jsonify(attendance=current_attendance)
+    return jsonify(attendance=[])
+
+@app.route('/get_total_students')
+def get_total_students():
+    latest_file = get_latest_excel_file(directory)
+    if latest_file:
+        df = pd.read_excel(latest_file)
+        total_students = df['STUDENTID'].nunique()
+        return jsonify(total_students=total_students)
+    return jsonify(total_students=0)
 
 @app.route('/get_scan_count')
 def get_scan_count():
-    latest_file = get_latest_excel_file(directory, classcode)
+    latest_file = get_latest_excel_file(directory)
     if latest_file != None:
         class_code = latest_file.split('_')[0].replace('classes/', '')
         scan_count = get_scan_count_for_classcode(class_code)
         today_str = datetime.now().strftime('%Y-%m-%d')
         attendance_data = load_pickle_data()
         if attendance_data:
-            attendancecount = len([record for record in attendance_data if record['classcode'] == class_code and record['date'] == today_str])
+            attendancecount = get_attendance_count(class_code, today_str)
         else:
             attendancecount = 0
-        return jsonify(count=scan_count, attendancecount=attendancecount)
+        return jsonify(count=scan_count, acount=attendancecount)
     else:
         return jsonify({'count': -1})
     

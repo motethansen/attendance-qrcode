@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code Attendance</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 <body>
     <h1> Scan the QR Code to update your attendance</h1>
@@ -24,56 +27,25 @@
         </div>
         <div id="attendance-counter">
             <h2>Attendances:</h2>
-            <span id="attendance_count">0</span> 
+            <span id="acount">0</span> 
+        </div>
+        
+    </div>
+
+    <div class="image-bar">
+       
+        <div id="qr-container">
+            <p>The QR code below renews every 15 sec:</p>
+            <img id="qr-code" src="{{ url_for('qr_code_image') }}" alt="QR Code">
+        </div>
+        <div id="attendanceChartContainer">
+            <h2>Attendance Chart</h2>
+            <canvas id="attendanceChart"></canvas>
         </div>
     </div>
 
-    <p>The QR code below renews every 15 sec:</p>
-    <div id="qr-container">
-        <img id="qr-code" src="{{ url_for('qr_code_image') }}" alt="QR Code">
-    </div>
-
-    <script>
-        let currentPosition = null;
-
-        function updateQRCode() {
-            fetch('/get_qr_url')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('qr-code').src = data.url + '?t=' + new Date().getTime();
-                    startCountdown();
-                });
-        }
-
-        function startCountdown() {
-            let seconds = 15;
-            const timerElement = document.getElementById('seconds');
-            
-            const countdownInterval = setInterval(() => {
-                seconds--;
-                timerElement.textContent = seconds;
-                
-                if (seconds <= 0) {
-                    clearInterval(countdownInterval);
-                    updateQRCode();
-                    updateScanCount();
-                }
-            }, 1000);
-        }
-
-
-        function updateScanCount() {
-            fetch('/get_scan_count')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('scan-count').textContent = data.count;
-                    document.getElementById('attendance_count').textContent = data.attendancecount;
-                });
-        }
-
-        updateQRCode();
-        setInterval(updateAttendanceCount, 5000); // Update attendance count every 5 seconds
-    </script>
+     <!-- <script src="{{ url_for('static', filename='chart.js') }}"></script> -->
+     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
 
