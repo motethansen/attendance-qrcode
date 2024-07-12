@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(response => response.json())
             .then(data => {
                 const totalStudents = data.total_students;
-                const attendanceCount = parseInt(document.getElementById('acount').textContent, 10);
+                const attendanceCount = data.attendancecount;//parseInt(document.getElementById('acount').textContent, 10);
                 const notAttendedCount = totalStudents - attendanceCount;
 
                 if (isNaN(attendanceCount) || isNaN(notAttendedCount)) {

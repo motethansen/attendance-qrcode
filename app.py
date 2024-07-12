@@ -100,16 +100,24 @@ def save_to_pickle(data):
 
 # still some issues with the increment function
 def increment_scan_count(student_id):
+    s_count = 0
+    class_code=""
+    latest_file = get_latest_excel_file(directory)
+    if latest_file:
+        class_code = latest_file.split('_')[0].replace('classes/', '')
+    today_str = datetime.now().strftime('%Y-%m-%d')
     data = load_pickle_data()
-    student_id_str = str(student_id)  # Ensure student_id is a string
+    student_id_str = student_id  # Ensure student_id is a string
     found = False
     for record in data:
-        if 'student_id' in record and record['student_id'] == student_id_str:
-            record['scan_count_for_the_id'] = record.get('scan_count_for_the_id', 0) + 1
-            found = True
-            break
-    
-    save_to_pickle(data)
+        if ('classcode' in record and 'date' in record and 'student_id' in record and record['student_id']):
+            if( record['student_id']== student_id_str and record['classcode'] == class_code and record['date'] == today_str):
+                s_count = record['scan_count_for_the_id'] = record.get('scan_count_for_the_id', 0) + 1
+                found = True
+                break
+    if (found == True):
+        save_to_pickle(data)
+    return s_count
 
 
 def get_attendance_count(classcode, date):
@@ -282,7 +290,7 @@ def submit_attendance():
                         #return f"Attendance recorded for Student ID: {student_id} at {timestamp}"
                 else:
                     if (scan_count_for_the_id > 0):
-                        increment_scan_count(student_id)
+                        scan_count_for_the_id = increment_scan_count(student_id)
                         attendance_status = df.loc[df['STUDENTID'] == student_id, date_columns].iloc[0].to_dict()
                     return render_template('result.html', status = "Registration was already recorded!",student_id=student_id, attendance_status=attendance_status, date_columns=date_columns, given_name=student_given_name, family_name=student_family_name, scan_count_for_the_id=scan_count_for_the_id)
                     #return f"Registration was already recorded for Student ID: {student_id}"
@@ -306,12 +314,15 @@ def get_attendance_status():
 
 @app.route('/get_total_students')
 def get_total_students():
+    today_str = datetime.now().strftime('%Y-%m-%d')
     latest_file = get_latest_excel_file(directory)
     if latest_file:
+        class_code = latest_file.split('_')[0].replace('classes/', '')
+        attendancecount = get_attendance_count(class_code, today_str)
         df = pd.read_excel(latest_file)
         total_students = df['STUDENTID'].nunique()
-        return jsonify(total_students=total_students)
-    return jsonify(total_students=0)
+        return jsonify(total_students=total_students, attendancecount=attendancecount)
+    return jsonify(total_students=0, attendancecount=0)
 
 @app.route('/get_scan_count')
 def get_scan_count():
