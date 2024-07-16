@@ -41,3 +41,7 @@ export FLASK_APP=flask_app.py
 flask run
 ```
 
+
+when uploadingthe class register files, make sure to edit the columns as follow:
+StudentID, given_name, family_name, gender, country, email, dob
+

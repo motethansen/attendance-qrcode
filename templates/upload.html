@@ -12,16 +12,22 @@
     </form>
     <h2>Upload Class File</h2>
     <form action="{{ url_for('admin_upload') }}" method="post" enctype="multipart/form-data">
+        <label for="class_code">Select Class Code:</label>
+        <select name="class_code" id="class_code">
+            {% for class_code in class_codes %}
+                <option value="{{ class_code.class_code }}">{{ class_code.class_code }}</option>
+            {% endfor %}
+        </select>
         <input type="file" name="class_file">
         <input type="submit" value="Upload Class">
     </form>
     <a href="{{ url_for('index') }}">Go Back</a>
 
-    {% if class_codes %}
+    {% if class_counts %}
     <h2>Class Codes</h2>
     <ul>
-        {% for class_code in class_codes %}
-            <li>{{ class_code.class_code }}</li>
+        {% for class_code, student_count in class_counts %}
+            <li>{{ class_code }}: {{ student_count }} students</li>
         {% endfor %}
     </ul>
     {% endif %}
@@ -47,5 +53,3 @@
     {% endif %}
 </body>
 </html>
-
-

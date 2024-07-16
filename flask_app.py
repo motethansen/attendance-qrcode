@@ -26,8 +26,14 @@ def index():
 
 @app.route('/admin/upload.html', methods=['GET', 'POST'])
 def admin_upload():
-    class_codes = []
+    class_codes = ClassCode.query.all()
     class_schedules = []
+    
+    class_counts_query = db.session.query(
+        ClassCode.class_code,
+        db.func.count(ClassList.student_id).label('student_count')
+    ).outerjoin(ClassList, ClassCode.class_code == ClassList.class_code).group_by(ClassCode.class_code).all()
+    
     if request.method == 'POST':
         if 'config_file' in request.files:
             file = request.files['config_file']
@@ -37,18 +43,27 @@ def admin_upload():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             process_config_file(filepath)
-            class_codes = ClassCode.query.all()
             class_schedules = ClassSchedule.query.all()
+            class_counts_query = db.session.query(
+                ClassCode.class_code,
+                db.func.count(ClassList.student_id).label('student_count')
+            ).outerjoin(ClassList, ClassCode.class_code == ClassList.class_code).group_by(ClassCode.class_code).all()
         elif 'class_file' in request.files:
+            class_code = request.form.get('class_code')
             file = request.files['class_file']
             if file.filename == '' or not allowed_file(file.filename):
                 return redirect(request.url)
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
-            process_class_file(filepath, filename)
-        return render_template('upload.html', class_codes=class_codes, class_schedules=class_schedules)
-    return render_template('upload.html', class_codes=class_codes, class_schedules=class_schedules)
+            process_class_file(filepath, class_code)
+            class_counts_query = db.session.query(
+                ClassCode.class_code,
+                db.func.count(ClassList.student_id).label('student_count')
+            ).outerjoin(ClassList, ClassCode.class_code == ClassList.class_code).group_by(ClassCode.class_code).all()
+        return render_template('upload.html', class_codes=class_codes, class_schedules=class_schedules, class_counts=class_counts_query)
+    return render_template('upload.html', class_codes=class_codes, class_schedules=class_schedules, class_counts=class_counts_query)
+
 
 
 def process_config_file(filepath):
@@ -85,7 +100,7 @@ def process_config_file(filepath):
     db.session.commit()
 
 
-def process_class_file(filepath, filename):
+def process_class_file(filepath, class_code):
     df = pd.read_excel(filepath)
     for _, row in df.iterrows():
         student = Student.query.filter_by(student_id=row['student_id']).first()
@@ -100,11 +115,12 @@ def process_class_file(filepath, filename):
                 dob=row['dob']
             )
             db.session.add(student)
-        class_list = ClassList.query.filter_by(class_code=row['class_code'], student_id=row['student_id']).first()
+        class_list = ClassList.query.filter_by(class_code=class_code, student_id=row['student_id']).first()
         if class_list is None:
-            class_list = ClassList(class_code=row['class_code'], student_id=row['student_id'])
+            class_list = ClassList(class_code=class_code, student_id=row['student_id'])
             db.session.add(class_list)
     db.session.commit()
+
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
