@@ -16,5 +16,36 @@
         <input type="submit" value="Upload Class">
     </form>
     <a href="{{ url_for('index') }}">Go Back</a>
+
+    {% if class_codes %}
+    <h2>Class Codes</h2>
+    <ul>
+        {% for class_code in class_codes %}
+            <li>{{ class_code.class_code }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    
+    {% if class_schedules %}
+    <h2>Class Schedules</h2>
+    <table border="1">
+        <tr>
+            <th>Class Code</th>
+            <th>Date</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+        </tr>
+        {% for schedule in class_schedules %}
+        <tr>
+            <td>{{ schedule.class_code }}</td>
+            <td>{{ schedule.date }}</td>
+            <td>{{ schedule.start_time }}</td>
+            <td>{{ schedule.end_time }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
 </body>
 </html>
+
+

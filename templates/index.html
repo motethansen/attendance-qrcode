@@ -5,21 +5,41 @@
 </head>
 <body>
     <h1>Class Management</h1>
+    
     <h2>Class Counts</h2>
     <ul>
-        {% for class_id, count in class_counts %}
-            <li>{{ class_id }}: {{ count }} students</li>
+        {% for class_code, count in class_counts %}
+            <li>{{ class_code }}: {{ count }} students</li>
         {% endfor %}
     </ul>
-    <h2>Upload Config File</h2>
-    <form action="{{ url_for('upload_config') }}" method="post" enctype="multipart/form-data">
-        <input type="file" name="file">
-        <input type="submit" value="Upload">
-    </form>
-    <h2>Upload Class File</h2>
-    <form action="{{ url_for('upload_class') }}" method="post" enctype="multipart/form-data">
-        <input type="file" name="file">
-        <input type="submit" value="Upload">
-    </form>
+    
+    <h2>Class Codes</h2>
+    <ul>
+        {% for class_code in class_codes %}
+            <li>{{ class_code.class_code }}</li>
+        {% endfor %}
+    </ul>
+    
+    <h2>Class Schedules</h2>
+    <table border="1">
+        <tr>
+            <th>Class Code</th>
+            <th>Date</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+        </tr>
+        {% for schedule in class_schedules %}
+        <tr>
+            <td>{{ schedule.class_code }}</td>
+            <td>{{ schedule.date }}</td>
+            <td>{{ schedule.start_time }}</td>
+            <td>{{ schedule.end_time }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <a href="{{ url_for('admin_upload') }}">Go to Admin Upload Page</a>
 </body>
 </html>
+
+
