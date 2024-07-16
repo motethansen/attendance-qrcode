@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Attendance</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+</head>
+<body>
+    <h1> Scan the QR Code to update your attendance</h1>
+    
+    <div class="info-bar">
+        <div>
+            <h2>Class Code: {{ classcode }}</h2>
+            <h2>Session Start Time: {{ start_time }}</h2>
+            <h2>Today's Date: {{ today_str }}</h2>
+            <h2>Total Scans: <span id="scan-count">{{ scan_count }}</span></h2>
+        </div>
+        <div id="countdown">
+            <h2>Update in:</h2>
+            <div id="timer">
+                <span id="seconds">15</span> seconds
+            </div>
+        </div>
+        <div id="attendance-counter">
+            <h2>Attendances:</h2>
+            <span id="acount">0</span> 
+        </div>
+        
+    </div>
+
+    <div class="image-bar">
+       
+        <div id="qr-container">
+            <p>The QR code below renews every 15 sec:</p>
+            <img id="qr-code" src="{{ url_for('qr_code_image') }}" alt="QR Code">
+        </div>
+        <div id="attendanceChartContainer">
+            <h2>Attendance Chart</h2>
+            <canvas id="attendanceChart"></canvas>
+        </div>
+    </div>
+
+     <!-- <script src="{{ url_for('static', filename='chart.js') }}"></script> -->
+     <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+
